@@ -1,0 +1,56 @@
+%% Level 2 — Mid Level | Variant A — IEEE Academic Style
+%% Subsystem architecture; clean inter-subsystem data flows
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph AST_SUB["AST Analysis Subsystem"]
+        MG2[Mutation Engine]
+        IE2[Identity Engine]
+        EQ4[Equivalence Detector]
+        PGRAPH2[Project Graph Builder]
+    end
+
+    subgraph STRAT_SUB["Test Generation Subsystem"]
+        REG3[Strategy Registry]
+        ACOC4[ACOC Strategy]
+        LLMST2[LLM Strategy]
+        DOM3[Domain Strategy]
+        REG3 --> ACOC4 & LLMST2 & DOM3
+    end
+
+    subgraph EXEC_SUB["Execution Subsystem"]
+        FACT2[Executor Factory]
+        WPE2[Worker Pool Executor]
+        CE2[Container Executor]
+        LE2[Legacy Executor]
+        FACT2 --> WPE2 & CE2 & LE2
+    end
+
+    subgraph OPT_SUB["Optimization Subsystem"]
+        ILP4[ILP Solver: CBC]
+        GREED4[Greedy Set Cover Fallback]
+        FB5[Feedback Loop]
+        ILP4 -->|"on timeout or infeasible"| GREED4
+        FB5 -->|"extends KillMatrix"| ILP4
+    end
+
+    subgraph REP_SUB["Reporting Subsystem"]
+        REP5[Report Generator]
+        EXP[Pytest Exporter]
+        FA3[Feedback Analyzer]
+        FA3 -.->|"advisory insights"| REP5
+    end
+
+    subgraph INFRA_SUB["Infrastructure Subsystem"]
+        CACHE5[(Kill Matrix Cache)]
+        HIST6[(History Tracker)]
+        LOG5[Logging Setup]
+        MAN4[Run Manifest]
+    end
+
+    AST_SUB -->|"list[MutantRecord]"| STRAT_SUB
+    STRAT_SUB -->|"list[TestRecord]"| EXEC_SUB
+    EXEC_SUB -->|"KillMatrix + OrigResults"| OPT_SUB
+    OPT_SUB -->|"ILPResult"| REP_SUB
+    EQ4 -.->|"advisory equivalent_ids"| REP_SUB
+    INFRA_SUB -.->|"cross-cutting"| AST_SUB & EXEC_SUB & OPT_SUB

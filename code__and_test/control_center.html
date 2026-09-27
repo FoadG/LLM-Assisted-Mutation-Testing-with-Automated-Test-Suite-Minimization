@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>V3 Control Center · Mutation Framework</title>
+<style>
+  :root{
+    --bg:#11151c; --panel:#161c26; --panel-2:#1c2430; --line:#27313f;
+    --ink:#dfe7f1; --ink-dim:#8d9bb0; --ink-faint:#5f6e83;
+    --signal:#39c2c9;            /* instrument readout */
+    --killed:#86d46b;            /* mutant KILLED */
+    --alive:#e8b54a;             /* mutant ALIVE/SUSPECTED */
+    --equiv:#7d8bd4;             /* provably EQUIVALENT */
+    --err:#e0726b;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --r:8px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:14px;line-height:1.45}
+  @media (prefers-reduced-motion: no-preference){a,button{transition:.12s}}
+  header{display:flex;align-items:baseline;gap:14px;padding:14px 20px;
+    border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .tag{font-family:var(--mono);color:var(--signal);font-size:12px}
+  header .meta{margin-left:auto;font-family:var(--mono);color:var(--ink-faint);font-size:12px}
+  .wrap{display:flex;min-height:calc(100vh - 51px)}
+  nav{width:188px;border-right:1px solid var(--line);background:var(--panel);
+    padding:10px;flex-shrink:0}
+  nav button{display:block;width:100%;text-align:left;background:none;border:0;
+    color:var(--ink-dim);padding:9px 10px;border-radius:var(--r);cursor:pointer;
+    font-size:13px;font-family:var(--sans)}
+  nav button:hover{background:var(--panel-2);color:var(--ink)}
+  nav button.on{background:var(--panel-2);color:var(--signal);
+    box-shadow:inset 2px 0 0 var(--signal)}
+  nav .grp{font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-faint);padding:14px 10px 4px}
+  main{flex:1;padding:22px 26px;overflow:auto;max-width:1100px}
+  section{display:none}
+  section.on{display:block}
+  h2{font-size:18px;margin:0 0 4px;font-weight:600}
+  .sub{color:var(--ink-dim);margin:0 0 18px;font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:16px;margin-bottom:16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  button.act{background:var(--signal);color:#06222a;border:0;padding:8px 14px;
+    border-radius:var(--r);font-weight:600;cursor:pointer;font-size:13px}
+  button.act:hover{filter:brightness(1.08)}
+  button.act.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  button.act.danger{background:var(--err);color:#2a0b09}
+  button.act:disabled{opacity:.45;cursor:not-allowed}
+  label.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-dim)}
+  select,input[type=text],textarea{background:var(--panel-2);border:1px solid var(--line);
+    color:var(--ink);border-radius:6px;padding:7px 9px;font-family:var(--mono);font-size:12px}
+  textarea{width:100%;min-height:300px;resize:vertical}
+  .toggle{display:flex;gap:6px;align-items:center;color:var(--ink-dim);font-size:13px;cursor:pointer}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12px}
+  th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink-faint);font-weight:600;position:sticky;top:0;background:var(--panel)}
+  tr:hover td{background:var(--panel-2)}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--r)}
+  .pill{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:20px;
+    border:1px solid var(--line)}
+  .pill.ok{color:var(--killed);border-color:#314a2b}
+  .pill.bad{color:var(--err);border-color:#4a2b2a}
+  .pill.warn{color:var(--alive);border-color:#4a3f22}
+  .kv{font-family:var(--mono);font-size:12px}
+  .kv b{color:var(--ink-dim);font-weight:500;display:inline-block;min-width:170px}
+  pre{font-family:var(--mono);font-size:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:var(--r);padding:12px;overflow:auto;margin:0}
+  .bars div{display:flex;align-items:center;gap:8px;margin:3px 0;font-family:var(--mono);font-size:12px}
+  .bars .bar{height:13px;background:var(--signal);border-radius:3px;min-width:2px}
+  .bars .lab{width:120px;color:var(--ink-dim);flex-shrink:0;text-align:right}
+  .bars .num{color:var(--ink-faint);width:46px}
+  .log{font-family:var(--mono);font-size:12px;background:#0c1016;border:1px solid var(--line);
+    border-radius:var(--r);padding:12px;height:340px;overflow:auto;white-space:pre-wrap}
+  .log .error{color:var(--err)} .log .warn{color:var(--alive)}
+  .log .phase{color:var(--signal)} .log .done{color:var(--killed)}
+  .log .start{color:var(--ink-dim)}
+  .empty{color:var(--ink-faint);font-family:var(--mono);font-size:12px;padding:8px 0}
+  .err{color:var(--err);font-family:var(--mono);font-size:12px}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--ink-dim);margin-bottom:10px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}nav{width:150px}}
+  svg text{font-family:var(--mono);font-size:9px;fill:var(--ink-dim)}
+  code.inline{font-family:var(--mono);background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Control Center</h1>
+  <span class="tag" id="phaseTag">phases · mutate → pool → matrix → ILP → feedback → report</span>
+  <span class="meta" id="meta">connecting…</span>
+</header>
+<div class="wrap">
+  <nav>
+    <div class="grp">Inspect</div>
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="config">Configuration</button>
+    <button data-tab="project">Project &amp; symbols</button>
+    <button data-tab="graphs">Dependency graphs</button>
+    <button data-tab="mutation">Mutation preview</button>
+    <div class="grp">Operate</div>
+    <button data-tab="run">Run pipeline</button>
+    <button data-tab="results">Results</button>
+    <button data-tab="history">History &amp; trend</button>
+    <div class="grp">Reference</div>
+    <button data-tab="capabilities">Capabilities</button>
+  </nav>
+  <main>
+
+  <section id="overview" class="on">
+    <h2>Overview</h2>
+    <p class="sub">Live status of the framework and the verified backends this console drives.</p>
+    <div class="grid2">
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">Runtime</h3>
+        <div id="ovHealth" class="empty">loading…</div></div>
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">Environment / reproducibility</h3>
+        <div id="ovEnv" class="empty">loading…</div></div>
+    </div>
+    <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">Execution backends</h3>
+      <div id="ovBackends" class="empty">loading…</div></div>
+  </section>
+
+  <section id="config">
+    <h2>Configuration</h2>
+    <p class="sub">Edit <code class="inline">config.json</code>. Validation runs the real schema check
+       (<code class="inline">config_loader.load_config</code>, non-interactive).</p>
+    <div class="row">
+      <button class="act" onclick="loadConfig()">Reload</button>
+      <button class="act" onclick="validateConfig()">Validate</button>
+      <button class="act ghost" onclick="saveConfig()">Save changes</button>
+      <span id="cfgValid"></span>
+    </div>
+    <textarea id="cfgText" spellcheck="false"></textarea>
+    <div id="cfgMsg" class="empty"></div>
+  </section>
+
+  <section id="project">
+    <h2>Project &amp; symbols</h2>
+    <p class="sub">Built from <code class="inline">project_model.build_project_model(config)</code>.
+       Single-file config yields one module; set <code class="inline">project.root</code> to discover a tree.</p>
+    <div class="row"><button class="act" onclick="loadProject()">Build model</button>
+      <span id="projMeta" class="kv"></span></div>
+    <div class="scroll"><table><thead><tr><th>Module</th><th>Parsed</th><th>Symbols</th><th>Path</th></tr></thead>
+      <tbody id="projRows"></tbody></table></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">
+      Symbols <span id="symModule" class="kv"></span></h3>
+      <div class="scroll"><table><thead><tr><th>Qualified name</th><th>Kind</th><th>Lines</th></tr></thead>
+        <tbody id="symRows"><tr><td class="empty" colspan="3">select a module above</td></tr></tbody></table></div></div>
+  </section>
+
+  <section id="graphs">
+    <h2>Dependency graphs</h2>
+    <p class="sub">Real static graphs from <code class="inline">graphs.build_import_graph</code> /
+       <code class="inline">build_call_graph</code> (the latter is best-effort by design).</p>
+    <div class="row"><button class="act" onclick="loadGraphs()">Build graphs</button>
+      <span id="graphMeta" class="kv"></span></div>
+    <div class="grid2">
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">Import graph</h3>
+        <div id="importSvg"></div>
+        <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Importer</th><th>→ Target</th><th>In-project</th></tr></thead>
+          <tbody id="importRows"></tbody></table></div></div>
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">Call graph (resolved edges)</h3>
+        <div id="callMeta" class="empty"></div>
+        <div class="scroll"><table><thead><tr><th>Caller</th><th>→ Callee</th><th>Kind</th></tr></thead>
+          <tbody id="callRows"></tbody></table></div></div>
+    </div>
+  </section>
+
+  <section id="mutation">
+    <h2>Mutation preview</h2>
+    <p class="sub">Generates every mutant from the target <em>before</em> running the pipeline —
+       <code class="inline">mutant_generator.generate_all_mutants(source, config.mutation)</code>.</p>
+    <div class="row"><button class="act" onclick="previewMutants()">Preview mutants</button>
+      <span id="mutMeta" class="kv"></span></div>
+    <div class="grid2">
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">By operator</h3>
+        <div id="opBars" class="bars"></div></div>
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">By category</h3>
+        <div id="catBars" class="bars"></div></div>
+    </div>
+    <div class="scroll"><table><thead><tr><th>ID</th><th>Op</th><th>Fn</th><th>Line</th><th>Original → Mutated</th></tr></thead>
+      <tbody id="mutRows"></tbody></table></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin-top:0;font-size:13px;color:var(--ink-dim)">
+      Source diff <span id="diffId" class="kv"></span></h3>
+      <div class="grid2"><pre id="diffOrig" class="empty">select a mutant row</pre><pre id="diffMut"></pre></div></div>
+  </section>
+
+  <section id="run">
+    <h2>Run pipeline</h2>
+    <p class="sub">Launches <code class="inline">python main.py --config … --target …</code>
+       (the same target gui.py uses) and streams its logs. Backend choice writes the verified
+       <code class="inline">sandbox.execution_backend</code> key first.</p>
+    <div class="row">
+      <label class="fld">Execution backend
+        <select id="runBackend"><option>pool</option><option>legacy</option><option>container</option></select></label>
+      <label class="toggle"><input type="checkbox" id="runNoLlm"> Skip LLM</label>
+      <label class="toggle"><input type="checkbox" id="runVerbose"> Verbose</label>
+      <button class="act" id="btnLaunch" onclick="launchRun()">Launch run</button>
+      <button class="act danger" id="btnStop" onclick="stopRun()" disabled>Stop run</button>
+      <button class="act ghost" onclick="exportPytest()">Export pytest suite</button>
+      <span id="runState" class="kv"></span>
+    </div>
+    <div id="runLog" class="log"></div>
+    <div id="exportMsg" class="empty"></div>
+  </section>
+
+  <section id="results">
+    <h2>Results</h2>
+    <p class="sub">Reads <code class="inline">output/{mutation_report,minimum_test_suite,mutants}.json</code>
+       and runs provable-equivalence detection over the survivors.</p>
+    <div class="row">
+      <button class="act" onclick="loadReport()">Load report</button>
+      <button class="act ghost" onclick="loadMutants()">Load mutants</button>
+      <button class="act ghost" onclick="loadSuite()">Load suite</button>
+      <button class="act ghost" onclick="detectEquiv()">Detect equivalents</button>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--killed)"></span>killed</span>
+      <span><span class="dot" style="background:var(--alive)"></span>alive / suspected</span>
+      <span><span class="dot" style="background:var(--equiv)"></span>provably equivalent</span>
+    </div>
+    <div id="resOut" class="empty">no results loaded</div>
+  </section>
+
+  <section id="history">
+    <h2>History &amp; trend</h2>
+    <p class="sub">From <code class="inline">history_tracker.load_history / get_trend</code> in the output dir.</p>
+    <div class="row"><button class="act" onclick="loadHistory()">Load history</button>
+      <span id="trendMeta" class="kv"></span></div>
+    <div class="card"><div id="trendBars" class="bars"></div></div>
+    <div class="scroll"><table><thead><tr><th>Timestamp</th><th>Adjusted</th><th>Raw</th><th>Killed/Total</th><th>Min tests</th><th>Runtime s</th></tr></thead>
+      <tbody id="histRows"></tbody></table></div>
+  </section>
+
+  <section id="capabilities">
+    <h2>Capabilities</h2>
+    <p class="sub">Honest map. The left list is wired to real functions. The right list has
+       <strong>no backend in this repository</strong> — shown as reference, never as dead controls.</p>
+    <div class="grid2">
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--killed)">Wired</h3>
+        <div id="capWired" class="empty">loading…</div></div>
+      <div class="card"><h3 style="margin-top:0;font-size:13px;color:var(--alive)">Not supported (evidence)</h3>
+        <div id="capNot" class="empty">loading…</div></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  let j; try{ j = await r.json(); }catch(e){ j = {ok:false,error:"non-JSON response"}; }
+  if(!r.ok && j && j.ok!==false){ j = {ok:false, error:"HTTP "+r.status}; }
+  return j;
+}
+async function post(path, body){ return api(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}); }
+function showErr(el, j){ el.className="err"; el.textContent = "✗ " + (j.error||"unknown error"); }
+
+// nav
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll("section").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $("#"+b.dataset.tab).classList.add("on");
+});
+
+// overview
+async function loadOverview(){
+  const h = await api("/api/health");
+  if(h.ok){ $("#meta").textContent = "py "+h.python+" · "+h.project_root;
+    $("#ovHealth").className="kv";
+    $("#ovHealth").innerHTML = `<div><b>project root</b> ${esc(h.project_root)}</div>
+      <div><b>config.json present</b> ${h.config_present?'<span class="pill ok">yes</span>':'<span class="pill bad">no</span>'}</div>
+      <div><b>python</b> ${esc(h.python)}</div><div><b>server time</b> ${esc(h.time)}</div>`;
+  } else { showErr($("#ovHealth"), h); }
+  const e = await api("/api/env");
+  if(e.ok){ const d=e.data; $("#ovEnv").className="kv";
+    $("#ovEnv").innerHTML = `<div><b>python</b> ${esc(d.python_version)}</div>
+      <div><b>platform</b> ${esc(d.platform)}</div><div><b>impl</b> ${esc(d.implementation)}</div>
+      <div><b>acoc seed</b> ${esc(d.acoc_seed)}</div>
+      <div><b>deps</b> ${esc(JSON.stringify(d.dependencies))}</div>`;
+  } else showErr($("#ovEnv"), e);
+  const b = await api("/api/backends");
+  if(b.ok){ $("#ovBackends").className="kv";
+    $("#ovBackends").innerHTML = `<div><b>current</b> <span class="pill ok">${esc(b.current)}</span></div>
+      <div><b>available</b> ${b.available.map(x=>'<span class="pill">'+esc(x)+'</span>').join(" ")}</div>
+      <div style="color:var(--ink-faint);margin-top:6px">${esc(b.note)}</div>`;
+    $("#runBackend").value = b.current && b.available.includes(b.current) ? b.current : "pool";
+  } else showErr($("#ovBackends"), b);
+}
+
+// config
+async function loadConfig(){
+  const j = await api("/api/config");
+  if(j.ok){ $("#cfgText").value = JSON.stringify(j.data,null,2);
+    $("#cfgValid").innerHTML = j.valid ? '<span class="pill ok">schema valid</span>'
+      : '<span class="pill bad">'+esc(j.error||"invalid")+'</span>';
+    $("#cfgMsg").className="empty"; $("#cfgMsg").textContent="";
+  } else showErr($("#cfgMsg"), j);
+}
+async function validateConfig(){ await loadConfig(); }
+async function saveConfig(){
+  let data; try{ data = JSON.parse($("#cfgText").value); }
+  catch(e){ $("#cfgMsg").className="err"; $("#cfgMsg").textContent="✗ editor contains invalid JSON: "+e.message; return; }
+  const j = await post("/api/config", data);
+  if(j.ok){ $("#cfgMsg").className="empty"; $("#cfgMsg").textContent="✓ saved"; await loadConfig(); }
+  else showErr($("#cfgMsg"), j);
+}
+
+// project
+async function loadProject(){
+  const j = await api("/api/project/model");
+  const tb=$("#projRows"); tb.innerHTML="";
+  if(!j.ok){ tb.innerHTML=`<tr><td colspan="4" class="err">✗ ${esc(j.error)}</td></tr>`; return; }
+  $("#projMeta").textContent = `root=${j.root} · ${j.modules.length} module(s)`;
+  j.module_infos.forEach(m=>{
+    const tr=document.createElement("tr"); tr.style.cursor="pointer";
+    tr.onclick=()=>loadSymbols(m.module);
+    tr.innerHTML=`<td>${esc(m.module)}</td>
+      <td>${m.parsed?'<span class="pill ok">ok</span>':'<span class="pill bad">'+esc(m.error||'fail')+'</span>'}</td>
+      <td>${m.symbols}</td><td style="color:var(--ink-faint)">${esc(m.path)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+async function loadSymbols(mod){
+  $("#symModule").textContent = "· "+mod;
+  const j = await api("/api/project/symbols?module="+encodeURIComponent(mod));
+  const tb=$("#symRows"); tb.innerHTML="";
+  if(!j.ok){ tb.innerHTML=`<tr><td colspan="3" class="err">✗ ${esc(j.error)}</td></tr>`; return; }
+  if(!j.symbols.length){ tb.innerHTML='<tr><td colspan="3" class="empty">no symbols</td></tr>'; return; }
+  j.symbols.forEach(s=>{ const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${esc(s.qualified_name)}</td><td>${esc(s.kind)}</td><td>${s.lineno}–${s.end_lineno}</td>`;
+    tb.appendChild(tr); });
+}
+
+// graphs
+async function loadGraphs(){
+  const ig = await api("/api/graph/import");
+  const tb=$("#importRows"); tb.innerHTML="";
+  if(ig.ok){
+    drawImport(ig.modules, ig.graph.edges);
+    $("#graphMeta").textContent = `${ig.modules.length} modules · ${ig.graph.edges.length} import edges`;
+    ig.graph.edges.forEach(e=>{ const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${esc(e.importer)}</td><td>${esc(e.target)}</td>
+        <td>${e.resolved?'<span class="pill ok">yes</span>':'<span class="pill warn">external</span>'}</td>`;
+      tb.appendChild(tr); });
+  } else { tb.innerHTML=`<tr><td colspan="3" class="err">✗ ${esc(ig.error)}</td></tr>`; }
+  const cg = await api("/api/graph/call");
+  const cb=$("#callRows"); cb.innerHTML="";
+  if(cg.ok){ $("#callMeta").className="kv";
+    $("#callMeta").textContent = `${cg.resolved} resolved · ${cg.unresolved} unresolved (best-effort)`;
+    (cg.graph.edges||[]).filter(e=>e.callee_resolved).slice(0,400).forEach(e=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${esc(e.caller)}</td><td>${esc(e.callee_resolved)}</td><td>${esc(e.kind)}</td>`;
+      cb.appendChild(tr); });
+    if(!cb.children.length) cb.innerHTML='<tr><td colspan="3" class="empty">no resolved edges</td></tr>';
+  } else { cb.innerHTML=`<tr><td colspan="3" class="err">✗ ${esc(cg.error)}</td></tr>`; }
+}
+function drawImport(modules, edges){
+  const N=modules.length, R=120, cx=160, cy=145, host=$("#importSvg");
+  if(!N){ host.innerHTML='<div class="empty">no modules</div>'; return; }
+  const pos={}; modules.forEach((m,i)=>{ const a=2*Math.PI*i/N - Math.PI/2;
+    pos[m]=[cx+R*Math.cos(a), cy+R*Math.sin(a)]; });
+  let s=`<svg viewBox="0 0 320 290" width="100%" height="260">`;
+  edges.filter(e=>e.resolved && pos[e.importer] && pos[e.target]).forEach(e=>{
+    const[a,b]=pos[e.importer], [c,d]=pos[e.target];
+    s+=`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#2c3a4c" stroke-width="1"/>`; });
+  modules.forEach(m=>{ const[x,y]=pos[m];
+    s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="#39c2c9"/>`;
+    const short=m.split(".").pop();
+    s+=`<text x="${x+5}" y="${y+3}">${esc(short)}</text>`; });
+  host.innerHTML = s+"</svg>";
+}
+
+// mutation
+async function previewMutants(){
+  const j = await post("/api/mutation/preview", {});
+  if(!j.ok){ $("#mutMeta").textContent=""; $("#mutRows").innerHTML=`<tr><td colspan="5" class="err">✗ ${esc(j.error)}</td></tr>`; return; }
+  $("#mutMeta").textContent = `${j.total} mutants`;
+  bars($("#opBars"), j.by_operator); bars($("#catBars"), j.by_category);
+  const tb=$("#mutRows"); tb.innerHTML="";
+  j.mutants.forEach(m=>{ const tr=document.createElement("tr"); tr.style.cursor="pointer";
+    tr.onclick=()=>diffMutant(m.id);
+    tr.innerHTML=`<td>${esc(m.id)}</td><td>${esc(m.operator)}</td><td>${esc(m.function)}</td>
+      <td>${m.line}</td><td><code class="inline">${esc(m.original)}</code> → <code class="inline">${esc(m.mutated)}</code></td>`;
+    tb.appendChild(tr); });
+}
+function bars(host, obj){
+  const ents=Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...ents.map(e=>e[1]));
+  host.innerHTML = ents.map(([k,v])=>`<div><span class="lab">${esc(k)}</span>
+    <span class="bar" style="width:${Math.round(v/max*180)}px"></span><span class="num">${v}</span></div>`).join("")
+    || '<div class="empty">none</div>';
+}
+async function diffMutant(id){
+  $("#diffId").textContent="· "+id;
+  const j = await api("/api/mutation/diff?id="+encodeURIComponent(id));
+  if(!j.ok){ $("#diffOrig").className="err"; $("#diffOrig").textContent="✗ "+j.error; $("#diffMut").textContent=""; return; }
+  $("#diffOrig").className=""; $("#diffOrig").textContent=j.original_full;
+  $("#diffMut").textContent=j.mutant_full;
+}
+
+// run + stream
+let es=null;
+function appendLog(m){ const d=$("#runLog"); const span=document.createElement("div");
+  span.className=m.type||"log"; span.textContent=m.text||""; d.appendChild(span); d.scrollTop=d.scrollHeight; }
+function startStream(){ if(es) return; es=new EventSource("/api/run/stream");
+  es.onmessage=ev=>{ const m=JSON.parse(ev.data); if(m.type==="ping")return; appendLog(m);
+    if(m.type==="done"){ pollStatus(); } }; }
+async function launchRun(){
+  $("#runLog").innerHTML="";
+  const j = await post("/api/run",{backend:$("#runBackend").value,
+    no_llm:$("#runNoLlm").checked, verbose:$("#runVerbose").checked});
+  if(!j.ok){ appendLog({type:"error",text:"✗ "+j.error}); return; }
+  startStream(); pollStatus();
+}
+async function stopRun(){ const j=await post("/api/run/stop",{}); if(!j.ok) appendLog({type:"warn",text:j.error}); pollStatus(); }
+async function pollStatus(){
+  const j=await api("/api/run/status"); if(!j.ok) return; const s=j.data;
+  $("#runState").innerHTML = s.running
+    ? `<span class="pill warn">running · ${esc(s.phase||"")}</span>`
+    : (s.exit_code===null?'<span class="pill">idle</span>'
+       : (s.exit_code===0?'<span class="pill ok">exit 0</span>':'<span class="pill bad">exit '+s.exit_code+'</span>'));
+  $("#btnLaunch").disabled = s.running; $("#btnStop").disabled = !s.running;
+}
+async function exportPytest(){
+  $("#exportMsg").className="empty"; $("#exportMsg").textContent="exporting…";
+  const j=await post("/api/export/pytest",{});
+  if(j.ok){ $("#exportMsg").className="kv"; $("#exportMsg").innerHTML=`✓ wrote <code class="inline">${esc(j.path)}</code> (${j.content.split("\n").length} lines)`; }
+  else showErr($("#exportMsg"), j);
+}
+
+// results
+function statusPill(s){ if(s==="KILLED")return'<span class="pill ok">KILLED</span>';
+  if(s==="EQUIVALENT")return'<span class="pill" style="color:var(--equiv);border-color:#383f63">EQUIVALENT</span>';
+  return'<span class="pill warn">'+esc(s)+'</span>'; }
+async function loadReport(){
+  const j=await api("/api/results/report"); const o=$("#resOut");
+  if(!j.ok){ showErr(o,j); return; } const d=j.data;
+  o.className=""; o.innerHTML = `<div class="card"><pre>${esc(JSON.stringify(d,null,2)).slice(0,6000)}</pre></div>`;
+}
+async function loadMutants(){
+  const j=await api("/api/results/mutants"); const o=$("#resOut");
+  if(!j.ok){ showErr(o,j); return; }
+  let rows=(j.data||[]).map(m=>`<tr><td>${esc(m.id)}</td><td>${esc(m.operator_name)}</td>
+    <td>${esc(m.function_name)}</td><td>${m.line}</td><td>${statusPill(m.status)}</td></tr>`).join("");
+  o.className=""; o.innerHTML=`<div class="scroll"><table><thead><tr><th>ID</th><th>Op</th><th>Fn</th><th>Line</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan=5 class=empty>empty</td></tr>'}</tbody></table></div>`;
+}
+async function loadSuite(){
+  const j=await api("/api/results/suite"); const o=$("#resOut");
+  if(!j.ok){ showErr(o,j); return; }
+  o.className=""; o.innerHTML=`<div class="card"><pre>${esc(JSON.stringify(j.data,null,2)).slice(0,6000)}</pre></div>`;
+}
+async function detectEquiv(){
+  const j=await api("/api/results/equivalence"); const o=$("#resOut");
+  if(!j.ok){ showErr(o,j); return; }
+  o.className="kv";
+  o.innerHTML=`<div class="card"><div><b>method</b> ${esc(j.method)}</div>
+    <div><b>suspected considered</b> ${j.considered_suspected}</div>
+    <div><b>provably equivalent</b> <span class="pill" style="color:var(--equiv);border-color:#383f63">${j.count}</span></div>
+    <div style="margin-top:8px"><b>ids</b> ${j.equivalent_ids.map(esc).map(x=>'<code class="inline">'+x+'</code>').join(" ")||'<span class="empty">none</span>'}</div></div>`;
+}
+
+// history
+async function loadHistory(){
+  const t=await api("/api/history/trend"); const r=await api("/api/history/runs");
+  if(t.ok){ const tr=t.trend; $("#trendMeta").textContent =
+      `${tr.runs} run(s) · trend=${tr.trend}` + (tr.latest_score!=null?` · latest=${tr.latest_score}%`:"");
+    const sc=tr.scores||[]; const max=Math.max(1,...sc,100);
+    $("#trendBars").innerHTML = sc.length? sc.map((v,i)=>`<div><span class="lab">${esc((tr.timestamps||[])[i]||("#"+(i+1)))}</span>
+      <span class="bar" style="width:${Math.round(v/max*200)}px;background:var(--killed)"></span><span class="num">${v}</span></div>`).join("")
+      : '<div class="empty">no history yet</div>';
+  } else { $("#trendMeta").textContent=""; $("#trendBars").innerHTML='<div class="err">✗ '+esc(t.error)+'</div>'; }
+  const tb=$("#histRows"); tb.innerHTML="";
+  if(r.ok){ (r.history||[]).slice().reverse().forEach(h=>{ const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${esc(h.timestamp)}</td><td>${esc(h.adjusted_score)}%</td><td>${esc(h.raw_score)}%</td>
+      <td>${esc(h.n_killed)}/${esc(h.n_total)}</td><td>${esc(h.n_min_tests)}</td><td>${esc(h.runtime_seconds)}</td>`;
+    tb.appendChild(tr); });
+    if(!tb.children.length) tb.innerHTML='<tr><td colspan="6" class="empty">no runs recorded</td></tr>';
+  } else tb.innerHTML=`<tr><td colspan="6" class="err">✗ ${esc(r.error)}</td></tr>`;
+}
+
+// capabilities
+async function loadCaps(){
+  const j=await api("/api/capabilities"); if(!j.ok){ showErr($("#capWired"),j); return; }
+  $("#capWired").className=""; $("#capWired").innerHTML = j.wired.map(c=>
+    `<div style="margin:7px 0"><div>${esc(c.feature)}</div><code class="inline">${esc(c.fn)}</code></div>`).join("");
+  $("#capNot").className=""; $("#capNot").innerHTML = j.not_supported.map(c=>
+    `<div style="margin:7px 0"><div>${esc(c.feature)}</div><span style="color:var(--ink-faint);font-size:11px">${esc(c.evidence)}</span></div>`).join("");
+}
+
+// boot
+loadOverview(); loadConfig(); loadCaps(); pollStatus();
+setInterval(pollStatus, 4000);
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+%% Level 2 — Mid Level | Variant B — Presentation Style
+%% Subsystem internals visible; suitable for conference slides
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph MUT3["Phase 1 — Mutation Generation"]
+        P1A["Parse source to AST"]
+        P1B["Collect mutable operators\nARITH · REL · INTEGRATION"]
+        P1C["Apply replacements\ndeep-copy per mutation"]
+        P1D["Validate and deduplicate\ncanonical diff + MD5 hash"]
+        P1A --> P1B --> P1C --> P1D
+    end
+
+    subgraph TGEN["Phase 2 — Test Pool Construction"]
+        SREG["Strategy Registry\nordered: acoc → llm → domain"]
+        SA["ACOC: Cartesian product\npartitions · seed=42 · sampling"]
+        SB["LLM: mutation-targeted prompts\ngroup by fn × operator"]
+        SC["Domain: sort and search\n14 sort + 21 search cases"]
+        SDED["Deduplicate\nMD5(function + inputs)"]
+        SREG --> SA & SB & SC --> SDED
+    end
+
+    subgraph KMAT["Phase 3 — Kill Matrix"]
+        KA["Run original code\nsequential · capture timings"]
+        KB["Adaptive timeout\nP90(orig_times) × multiplier=8"]
+        KC["Execute mutants in parallel\nWarm pool · ThreadPoolExecutor"]
+        KD["Assemble KillMatrix\nn_tests × n_mutants bool grid"]
+        KA --> KB --> KC --> KD
+    end
+
+    subgraph SOPT["Phases 4 and 5 — Optimization"]
+        OA["ILP: PuLP CBC\nmin Σ x_i  s.t. coverage"]
+        OB["Score: raw and adjusted %\nkilledtotal vs killed/(total-suspected)"]
+        OC["LLM Feedback\nextend pool if below target\nstop on no progress"]
+        OA --> OB
+        OB -->|"score below target"| OC --> OA
+    end
+
+    subgraph SANS["Advisory Analysis"]
+        SEQD["Equivalence Detection\nAST identity folding\nx*1 x+0 x/1 etc."]
+        SFBA["Feedback Analysis\nCategory-driven heuristics\nREL ARITH LOGICAL INTEGRATION"]
+    end
+
+    subgraph SREP["Phase 6 — Report Generation"]
+        SJSON["mutation_report.json\nsummary + mutant lists + analysis"]
+        SSUITE["minimum_test_suite.json\nselected tests + kills + expected"]
+        SMANIF["run_manifest.json\nphase timings + events"]
+    end
+
+    MUT3 -->|"list[MutantRecord]"| TGEN
+    TGEN -->|"list[TestRecord]"| KMAT
+    KMAT -->|"KillMatrix + OrigResults"| SOPT
+    SOPT --> SANS
+    SANS -->|"equivalence + feedback annotations"| SREP

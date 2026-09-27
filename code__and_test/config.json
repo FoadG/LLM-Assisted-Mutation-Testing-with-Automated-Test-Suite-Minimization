@@ -1,0 +1,138 @@
+{
+  "functions": [
+    {
+      "name": "bubble_sort",
+      "params": [
+        {
+          "name": "arr",
+          "type": "list_int"
+        }
+      ],
+      "type": "sort"
+    },
+    {
+      "name": "binary_search",
+      "params": [
+        {
+          "name": "arr",
+          "type": "sorted_list_int"
+        },
+        {
+          "name": "target",
+          "type": "int"
+        }
+      ],
+      "type": "search"
+    }
+  ],
+  "llm": {
+    "api_base": "https://api.anthropic.com/v1/messages",
+    "max_tokens": 1000,
+    "model": "claude-sonnet-4-6"
+  },
+  "mutation": {
+    "arithmetic_operators": true,
+    "integration_operators": [
+      "IPVR",
+      "IUOI",
+      "IORC",
+      "ISMA",
+      "IMCD"
+    ],
+    "logical_operators": false,
+    "relational_operators": true
+  },
+  "optimizer": {
+    "feedback_failed_inputs_in_prompt": 3,
+    "feedback_max_mutants_per_round": 10,
+    "feedback_max_new_tests_per_mutant": 2,
+    "feedback_max_rounds": 3,
+    "target_score": 90
+  },
+  "partitions": {
+    "int": [
+      0,
+      1,
+      -1,
+      100,
+      -100
+    ],
+    "list_int": [
+      [],
+      [
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      [
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      [
+        -3,
+        0,
+        2,
+        5
+      ],
+      [
+        3,
+        1,
+        4,
+        1,
+        5
+      ]
+    ],
+    "sorted_list_int": [
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      [
+        -5,
+        -1,
+        0,
+        3,
+        7
+      ],
+      [
+        1,
+        1,
+        2,
+        3,
+        3
+      ]
+    ]
+  },
+  "project": {
+    "output_dir": "output/",
+    "target_file": "target_code.py"
+  },
+  "sandbox": {
+    "timeout_seconds": 2,
+    "use_multiprocessing": true,
+    "execution_backend": "pool"
+  },
+  "test_pool": {
+    "acoc_max_per_function": 200,
+    "llm_enabled": false,
+    "llm_temperature": 0.85,
+    "llm_tests_per_representative": 4
+  }
+}

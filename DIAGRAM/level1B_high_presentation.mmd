@@ -1,0 +1,42 @@
+%% Level 1 — High Level | Variant B — Presentation Style
+%% Readable grouping, descriptive labels, designed for slides and talks
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph INPUT["Input Layer"]
+        CLI2["CLI or Web GUI\nmain.py · gui.py"]
+        CFG2["Configuration\nconfig.json"]
+        SRC2["Target Source\ntarget_code.py"]
+    end
+
+    subgraph PIPELINE["Six-Phase Mutation Testing Pipeline"]
+        P1B["Phase 1: Mutant Generation\nAST-based operator substitution"]
+        P2B["Phase 2: Test Pool Construction\nACOC + LLM + Domain strategies"]
+        P3B["Phase 3: Kill Matrix Execution\nParallel sandboxed runner"]
+        P4B["Phase 4: ILP Suite Minimization\nPuLP CBC + greedy fallback"]
+        P5B["Phase 5: LLM Feedback Loop\nTargeted test augmentation"]
+        P6B["Phase 6: Report Generation\nJSON artifacts + manifest"]
+        P1B --> P2B --> P3B --> P4B --> P5B --> P6B
+    end
+
+    subgraph SUPPORT["Support Layer"]
+        LLM2["Anthropic Claude API\nCircuit breaker + retry"]
+        CACHE3[("Kill Matrix Cache\nMD5-keyed JSON")]
+        HIST4[("Run History\nTrend tracking")]
+        INFRA["Infrastructure\nLogging · Manifest · Reproducibility"]
+    end
+
+    subgraph ANALYSIS["Advisory Analysis Layer"]
+        EQ["Equivalence Detection\nAST identity folding"]
+        FA["Feedback Analyzer\nCategory heuristics"]
+    end
+
+    INPUT --> PIPELINE
+    LLM2 --> P2B
+    LLM2 --> P5B
+    P3B <-.->|cache lookup| CACHE3
+    P6B --> HIST4
+    INFRA -.->|cross-cutting| PIPELINE
+    P5B --> ANALYSIS
+    ANALYSIS --> P6B
+    P6B --> OUT3[("mutation_report.json\nminimum_test_suite.json\nrun_manifest.json")]

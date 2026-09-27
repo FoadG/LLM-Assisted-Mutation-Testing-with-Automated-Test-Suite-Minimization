@@ -1,0 +1,22 @@
+%% Level 1 — High Level | Variant A — IEEE Academic Style
+%% Minimal, strict structure, suitable for journal submission
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    CLI[CLI Entry Point] --> ORC[Pipeline Orchestrator]
+    CFG[Configuration] --> ORC
+    SRC[Target Source File] --> ORC
+
+    ORC --> P1[Phase 1: Mutation Generation]
+    P1 -->|MutantRecord list| P2[Phase 2: Test Pool Construction]
+    P2 -->|TestRecord list| P3[Phase 3: Kill Matrix Construction]
+    P3 -->|KillMatrix| P4[Phase 4: ILP Suite Minimization]
+    P4 -->|ILPResult| P5[Phase 5: Feedback Augmentation]
+    P5 -->|Extended Results| P6[Phase 6: Result Reporting]
+
+    LLM[LLM Interface] -.->|test generation| P2
+    LLM -.->|targeted inputs| P5
+
+    P6 --> RPT[(JSON Report Artifacts)]
+    P6 --> STE[(Minimum Test Suite)]
+    P6 --> MAN[(Run Manifest)]

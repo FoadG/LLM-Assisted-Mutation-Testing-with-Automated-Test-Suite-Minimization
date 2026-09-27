@@ -1,0 +1,66 @@
+%% Level 1 — High Level | Variant C — Engineering Deep View
+%% Closer to implementation logic; module names, data types, config keys
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph ENTRY["Entry Points"]
+        MAIN["main.py: run_pipeline()"]
+        GUI3["gui.py: Flask + SSE streaming"]
+        ARGS["argparse: --no-llm --verbose --workers"]
+    end
+
+    subgraph CONFIG2["Configuration System"]
+        JSON2["config.json: functions partitions\nmutation sandbox optimizer llm"]
+        LOAD["config_loader.py\nvalidate keys · CI detect · normalize"]
+        PROJ["project_model.py\ndiscover_modules() · ast cache\nqualified_name_at()"]
+        LOAD --> PROJ
+    end
+
+    subgraph ORCH["Pipeline Orchestrator: run_pipeline()"]
+        OP1["P1: generate_all_mutants()\nmutant_generator.py"]
+        OP2["P2: build_pool() via strategy registry\ntest_pool_builder.py"]
+        OP3["P3: build_kill_matrix()\nsandbox_executor.py"]
+        OP4["P4: ilp_solver.solve()\nilp_solver.py"]
+        OP5["P5: feedback_loop.run()\nfeedback_loop.py"]
+        OANA["Advisory: equivalence.detect_equivalent()\nfeedback_analysis.analyze()"]
+        OP6["P6: reporter.generate()\nreporter.py"]
+        OP1 -->|"list[MutantRecord]"| OP2
+        OP2 -->|"list[TestRecord]"| OP3
+        OP3 -->|"KillMatrix + OrigResults"| OP4
+        OP4 -->|"ILPResult"| OP5
+        OP5 --> OANA
+        OANA -->|"equivalence + feedback dicts"| OP6
+    end
+
+    subgraph LLM4["LLM Service Layer"]
+        LCLI["LLMClient: circuit breaker (N=5)\nexponential backoff on 429/5xx"]
+        LDMY["DummyLLM: --no-llm mode\nreturns empty JSON list"]
+        LAPI["Anthropic Messages API\nclaude-sonnet-4-6"]
+        LCLI --> LAPI
+    end
+
+    subgraph INFRA3["Infrastructure"]
+        IMAN2["Manifest: phase timing + events\nschema v1 · atomic write"]
+        ILOG2["Logging: _HumanFormatter / _JsonFormatter\nidempotent configure()"]
+        IREP2["Reproducibility: capture_env()\nPython · deps · ACOC seed=42"]
+    end
+
+    subgraph STG["Storage Layer"]
+        SCACHE["KillMatrixCache\nMD5(src+mutants+tests) keyed\natomic JSON write"]
+        SHIST["history.json\nget_trend(): improving/stable/declining"]
+        SRPT["mutation_report.json\nadds analysis section when M2 enabled"]
+        SSUITE2["minimum_test_suite.json\nselected tests + kills + expected_output"]
+        SMAN2["run_manifest.json\nphase durations + events"]
+    end
+
+    ENTRY --> CONFIG2
+    CONFIG2 --> ORCH
+    LCLI --> OP2
+    LCLI --> OP5
+    LDMY -.->|"--no-llm flag"| OP2
+    INFRA3 -.->|"cross-cutting services"| ORCH
+    OP3 <-.->|"cache hit/miss"| SCACHE
+    OP6 --> SRPT & SSUITE2
+    IMAN2 --> SMAN2
+    OP6 --> SHIST
+    GUI3 -.->|"subprocess spawn"| MAIN

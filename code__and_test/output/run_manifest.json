@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "run_id": "06e7b4ee4e93",
+  "envelope": {
+    "python_version": "3.13.7",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "implementation": "CPython",
+    "dependencies": {
+      "pulp": "3.3.2",
+      "coverage": null,
+      "pytest": null
+    },
+    "acoc_seed": 42
+  },
+  "phases": [
+    {
+      "name": "P1_generate",
+      "duration_s": 0.1742,
+      "counts": {}
+    },
+    {
+      "name": "P2_pool",
+      "duration_s": 0.002,
+      "counts": {}
+    },
+    {
+      "name": "P3_matrix",
+      "duration_s": 65.2627,
+      "counts": {
+        "tests": 49,
+        "mutants": 48
+      }
+    },
+    {
+      "name": "P4_select",
+      "duration_s": 0.2181,
+      "counts": {}
+    },
+    {
+      "name": "P6_report",
+      "duration_s": 0.0042,
+      "counts": {}
+    }
+  ],
+  "events": [
+    {
+      "ts": 0.0,
+      "name": "run_start",
+      "fields": {
+        "target_file": "C:\\Users\\Foadglb\\Downloads\\PROJECT\\FINAL_REPOSITORY\\target_code.py",
+        "no_llm": true
+      }
+    },
+    {
+      "ts": 0.1742,
+      "name": "mutants_generated",
+      "fields": {
+        "count": 48
+      }
+    },
+    {
+      "ts": 0.1762,
+      "name": "pool_built",
+      "fields": {
+        "count": 49
+      }
+    },
+    {
+      "ts": 65.6627,
+      "name": "equivalence",
+      "fields": {
+        "count": 0
+      }
+    },
+    {
+      "ts": 65.6627,
+      "name": "feedback",
+      "fields": {
+        "survivors": 3
+      }
+    },
+    {
+      "ts": 65.6799,
+      "name": "result",
+      "fields": {
+        "killed": 45,
+        "total": 48,
+        "adjusted_score": 100.0,
+        "selected_tests": 4
+      }
+    }
+  ],
+  "total_duration_s": 65.6805
+}

@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unified Control Center — Mutation Framework</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --line:#2a313c;
+    --txt:#e6edf3; --muted:#8b98a9; --accent:#4493f8; --ok:#3fb950;
+    --warn:#d29922; --err:#f85149; --phase:#a371f7; --chip:#21262d;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  header h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:12px}
+  header .spacer{flex:1}
+  .pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:999px;background:var(--chip);border:1px solid var(--line);color:var(--muted)}
+  .pill.run{color:var(--ok);border-color:#1f6f33}
+  nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:49px;z-index:4}
+  nav button{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:13px}
+  nav button:hover{color:var(--txt);background:var(--panel2)}
+  nav button.active{color:var(--txt);background:var(--panel2);border-color:var(--line)}
+  main{padding:18px;max-width:1180px;margin:0 auto}
+  .tab{display:none}.tab.active{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  .card h2{font-size:14px;margin:0 0 4px}
+  .card .hint{color:var(--muted);font-size:12px;margin:0 0 12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  button.act{background:var(--accent);color:#fff;border:0;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:550}
+  button.act:hover{filter:brightness(1.08)}
+  button.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  button.danger{background:#3d1d1f;color:#ffb4ad;border:1px solid #6e2b2b}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  select,input[type=text],input[type=password]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:7px 9px;border-radius:6px;font-size:13px}
+  textarea{width:100%;min-height:240px;background:#0b0f14;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px;font-family:var(--mono);font-size:12.5px;resize:vertical}
+  label.fld{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+  .kv b{color:var(--muted);font-weight:500}
+  .mono{font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:550;position:sticky;top:0;background:var(--panel)}
+  tr:hover td{background:var(--panel2)}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:5px;background:var(--chip);border:1px solid var(--line)}
+  .tag.KILLED{color:var(--ok);border-color:#1f6f33}
+  .tag.ALIVE{color:var(--err);border-color:#6e2b2b}
+  .tag.SUSPECTED{color:var(--warn);border-color:#6b521a}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  #log{background:#0a0d12;border:1px solid var(--line);border-radius:8px;height:430px;overflow:auto;padding:10px;font-family:var(--mono);font-size:12px}
+  #log .l{white-space:pre-wrap;word-break:break-word;padding:1px 0}
+  #log .error{color:var(--err)} #log .warn{color:var(--warn)} #log .success{color:var(--ok)}
+  #log .phase{color:var(--phase);font-weight:600} #log .start{color:var(--accent)} #log .done{color:var(--accent)}
+  #log .info,#log .log{color:var(--txt)} #log .ping{display:none}
+  .msg{font-size:12px;padding:8px 10px;border-radius:7px;margin-top:8px;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:#11271a;color:#7ee787;border:1px solid #1f6f33}
+  .msg.bad{background:#2b1517;color:#ffb4ad;border:1px solid #6e2b2b}
+  .bar{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#56d364)}
+  .heat{display:flex;flex-wrap:wrap;gap:2px}
+  .heat .c{width:13px;height:13px;border-radius:2px;background:#21262d;border:1px solid #1b2027}
+  .heat .c.k{background:var(--ok)} .heat .c.a{background:#3d1d1f;border-color:#6e2b2b}
+  .opbar{display:flex;align-items:center;gap:8px;margin:3px 0}
+  .opbar .n{width:150px;font-family:var(--mono);font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .opbar .t{flex:1;background:var(--panel2);border-radius:4px;overflow:hidden;height:14px}
+  .opbar .t>i{display:block;height:100%;background:var(--accent)}
+  .opbar .v{width:34px;text-align:right;font-family:var(--mono);font-size:11.5px}
+  details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:8px;background:var(--panel2)}
+  details>summary{cursor:pointer;color:var(--muted)}
+  .notsup{border-left:3px solid var(--warn)}
+  pre.diff{background:#0a0d12;border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:340px;font-size:12px}
+  pre.diff .add{color:var(--ok)} pre.diff .del{color:var(--err)}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  code{font-family:var(--mono);background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>⬢ Unified Control Center</h1>
+  <span class="sub">mutation-testing framework · V2 (worker pool) + V3 (model · graphs · ILP)</span>
+  <span class="spacer"></span>
+  <span id="phasePill" class="pill">idle</span>
+  <span id="pyPill" class="pill mono">py …</span>
+</header>
+
+<nav id="nav">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="config">Configuration</button>
+  <button data-tab="target">Target</button>
+  <button data-tab="project">Project &amp; Graphs</button>
+  <button data-tab="mutation">Mutation Preview</button>
+  <button data-tab="run">Pipeline Run</button>
+  <button data-tab="results">Results &amp; Debug</button>
+  <button data-tab="history">History</button>
+</nav>
+
+<main>
+  <!-- OVERVIEW -->
+  <section id="overview" class="tab active">
+    <div class="card">
+      <h2>Runtime</h2>
+      <p class="hint">Live health from <code>GET /api/health</code> and environment capture from <code>infra.reproducibility.capture_env</code>.</p>
+      <div class="row"><button class="act" onclick="loadOverview()">Refresh</button></div>
+      <div id="healthBox" class="kv" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Execution backend</h2>
+      <p class="hint">Verified seam: <code>core.executor.make_executor()</code>. Selecting a backend writes <code>config.sandbox.execution_backend</code> on the next run.</p>
+      <div class="row">
+        <label class="fld">Backend
+          <select id="backendSel"></select>
+        </label>
+        <span id="backendNote" class="muted small"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Environment / reproducibility</h2>
+      <div id="envBox" class="kv"></div>
+    </div>
+    <div class="card">
+      <h2>Capability matrix <span class="muted small">(honest — wired vs. unbacked, with evidence)</span></h2>
+      <p class="hint">From <code>GET /api/capabilities</code>. Unbacked controls below are rendered <b>disabled</b> with the repository evidence for why no backend exists.</p>
+      <div id="capWired"></div>
+      <div id="capUnsup" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- CONFIG -->
+  <section id="config" class="tab">
+    <div class="card">
+      <h2>config.json</h2>
+      <p class="hint">Read + <b>real schema validation</b> via <code>utils.config_loader.load_config(non_interactive=True)</code>. Save writes the file (<code>POST /api/config</code>).</p>
+      <div class="row">
+        <button class="act" onclick="loadConfig()">Reload &amp; Validate</button>
+        <button class="ghost" onclick="saveConfig()">Save changes</button>
+        <span id="cfgValid" class="pill"></span>
+      </div>
+      <textarea id="cfgText" spellcheck="false" style="margin-top:10px"></textarea>
+      <div id="cfgMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- TARGET -->
+  <section id="target" class="tab">
+    <div class="card">
+      <h2>Target source</h2>
+      <p class="hint">Read <code>GET /api/target</code> · Save <code>POST /api/target</code> (parsed with <code>ast.parse</code> before writing — broken source is rejected).</p>
+      <div class="row">
+        <button class="act" onclick="loadTarget()">Reload</button>
+        <button class="ghost" onclick="saveTarget()">Save target</button>
+        <span id="tgtPath" class="muted small mono"></span>
+      </div>
+      <textarea id="tgtText" spellcheck="false" style="margin-top:10px"></textarea>
+      <div id="tgtMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- PROJECT & GRAPHS -->
+  <section id="project" class="tab">
+    <div class="card">
+      <h2>Project model</h2>
+      <p class="hint"><code>core.project_model.build_project_model</code>. Click a module to list its symbols (<code>ProjectModel.symbols</code>).</p>
+      <div class="row"><button class="act" onclick="loadProject()">Build model</button></div>
+      <div class="scroll" style="margin-top:10px"><table id="modTbl"><thead><tr><th>Module</th><th>Parsed</th><th>Symbols</th><th>Path</th></tr></thead><tbody></tbody></table></div>
+      <div id="symBox" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>Import &amp; call graphs</h2>
+      <p class="hint"><code>ProjectModel.import_graph()</code> / <code>.call_graph()</code> → <code>core.graphs</code>.</p>
+      <div class="row">
+        <button class="act" onclick="loadGraph('import')">Import graph</button>
+        <button class="act" onclick="loadGraph('call')">Call graph</button>
+      </div>
+      <div id="graphBox" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- MUTATION PREVIEW -->
+  <section id="mutation" class="tab">
+    <div class="card">
+      <h2>Pre-run mutant preview</h2>
+      <p class="hint"><code>core.mutant_generator.generate_all_mutants</code> over the current target — no execution, no scoring. Operator/category stats + per-mutant line diff.</p>
+      <div class="row"><button class="act" onclick="previewMutants()">Generate preview</button>
+        <span id="mutTotal" class="pill"></span></div>
+      <div class="grid" style="margin-top:12px">
+        <div><h3 class="muted small" style="margin:0 0 6px">By operator</h3><div id="opStats"></div></div>
+        <div><h3 class="muted small" style="margin:0 0 6px">By category</h3><div id="catStats"></div></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table id="mutTbl"><thead><tr><th>ID</th><th>Operator</th><th>Function</th><th>Line</th><th>Original → Mutated</th></tr></thead><tbody></tbody></table></div>
+      <div id="diffBox" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- RUN -->
+  <section id="run" class="tab">
+    <div class="card">
+      <h2>Pipeline control</h2>
+      <p class="hint">Launches <code>python main.py --config … --target … [--no-llm] [--verbose]</code> as a subprocess (same contract as gui.py). Backend is written to config first.</p>
+      <div class="row">
+        <button id="btnRun" class="act" onclick="startRun()">▶ Launch</button>
+        <button id="btnStop" class="danger" onclick="stopRun()" disabled>⏹ Stop</button>
+        <label class="fld"><input type="checkbox" id="noLlm" checked> --no-llm</label>
+        <label class="fld"><input type="checkbox" id="verbose"> --verbose</label>
+        <label class="fld">backend <select id="runBackend"></select></label>
+      </div>
+      <div class="row notsup" style="margin-top:10px;padding:8px;border-radius:7px;background:var(--panel2)">
+        <span class="muted small">No backend in repo →</span>
+        <button class="ghost" disabled title="pipeline runs as one monolithic subprocess; no checkpoint/IPC/pause hook">⏸ Pause</button>
+        <button class="ghost" disabled title="no resume hook">▶ Resume</button>
+        <button class="ghost" disabled title="no --phase CLI arg in main.py; cannot run a single phase">Step phase</button>
+        <button class="ghost" disabled title="no --phase/skip CLI arg in main.py">Skip phase</button>
+        <button class="ghost" disabled title="no checkpoint/replay capability in repo">Replay</button>
+        <span class="muted small">(see Overview → Capability matrix)</span>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <span class="muted small">Phase</span>
+        <span id="runPhase" class="pill">idle</span>
+        <span id="runExit" class="muted small"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Live log <span class="muted small">(SSE <code>/api/run/stream</code>)</span></h2>
+      <div class="row" style="margin-bottom:8px">
+        <label class="fld">filter <select id="logFilter">
+          <option value="">all</option><option value="phase">phase</option>
+          <option value="error">error</option><option value="warn">warn</option>
+          <option value="success">success</option></select></label>
+        <button class="ghost" onclick="clearLog()">Clear</button>
+        <label class="fld"><input type="checkbox" id="autoscroll" checked> autoscroll</label>
+      </div>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- RESULTS & DEBUG -->
+  <section id="results" class="tab">
+    <div class="card">
+      <h2>Score &amp; report</h2>
+      <p class="hint">Reads <code>output/mutation_report.json</code> (written by <code>core.reporter.generate</code>).</p>
+      <div class="row"><button class="act" onclick="loadReport()">Load report</button>
+        <a id="dlReport" class="pill" href="/api/results/download/mutation_report.json">⬇ report</a>
+        <a id="dlSuite" class="pill" href="/api/results/download/minimum_test_suite.json">⬇ suite</a>
+        <a id="dlMut" class="pill" href="/api/results/download/mutants.json">⬇ mutants</a>
+      </div>
+      <div id="reportBox" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Kill matrix / mutant inspector</h2>
+      <p class="hint">Reads <code>output/mutants.json</code> (now written by the orchestrator post-run). Heatmap = killed (green) vs alive (red).</p>
+      <div class="row"><button class="act" onclick="loadMutants()">Load mutants</button>
+        <button class="ghost" onclick="detectEquiv()">Detect provable equivalents</button>
+        <span id="equivPill" class="pill"></span></div>
+      <div id="heatBox" style="margin-top:12px"></div>
+      <div class="scroll" style="margin-top:10px"><table id="resMutTbl"><thead><tr><th>ID</th><th>Status</th><th>Operator</th><th>Function</th><th>Line</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Minimum suite &amp; pytest export</h2>
+      <p class="hint">Suite from <code>output/minimum_test_suite.json</code>; export via <code>utils.pytest_exporter.export_from_file</code>.</p>
+      <div class="row"><button class="act" onclick="loadSuite()">Load suite</button>
+        <button class="ghost" onclick="exportPytest()">Export pytest file</button></div>
+      <div id="suiteBox" style="margin-top:12px"></div>
+      <pre id="pytestBox" class="diff" style="display:none"></pre>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="tab">
+    <div class="card">
+      <h2>Run history &amp; trend</h2>
+      <p class="hint"><code>utils.history_tracker.load_history</code> / <code>get_trend</code> over <code>output/history.json</code> (now recorded by the orchestrator on each run).</p>
+      <div class="row"><button class="act" onclick="loadHistory()">Load history</button>
+        <span id="histPill" class="pill"></span></div>
+      <div id="trendBox" style="margin-top:12px"></div>
+      <div class="scroll" style="margin-top:10px"><table id="histTbl"><thead><tr><th>When</th><th>Adjusted</th><th>Killed/Total</th><th>Min tests</th><th>Runtime s</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+async function api(path,opt){const r=await fetch(path,opt);let j;try{j=await r.json()}catch(e){j={ok:false,error:'bad response'}}if(!r.ok&&j&&j.error)j.ok=false;return j;}
+function msg(el,txt,ok){el.textContent=txt;el.className='msg show '+(ok?'ok':'bad');setTimeout(()=>el.classList.remove('show'),4500);}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+// tabs
+$$('#nav button').forEach(b=>b.onclick=()=>{
+  $$('#nav button').forEach(x=>x.classList.remove('active'));
+  $$('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); $('#'+b.dataset.tab).classList.add('active');
+});
+
+/* ---------- Overview ---------- */
+async function loadOverview(){
+  const h=await api('/api/health');
+  if(h.ok){$('#pyPill').textContent='py '+h.python;
+    $('#healthBox').innerHTML=`<b>project root</b><span class="mono">${esc(h.project_root)}</span>
+      <b>config present</b><span>${h.config_present?'yes':'no'}</span>
+      <b>python</b><span class="mono">${esc(h.python)}</span>
+      <b>server time</b><span class="mono">${esc(h.time)}</span>`;}
+  const e=await api('/api/env');
+  if(e.ok){const d=e.data||{};$('#envBox').innerHTML=Object.entries(d).map(([k,v])=>
+    `<b>${esc(k)}</b><span class="mono">${esc(typeof v==='object'?JSON.stringify(v):v)}</span>`).join('');}
+  else $('#envBox').innerHTML=`<b>error</b><span class="mono">${esc(e.error)}</span>`;
+  const b=await api('/api/backends');
+  if(b.ok){const opts=b.available.map(x=>`<option ${x===b.current?'selected':''}>${x}</option>`).join('');
+    $('#backendSel').innerHTML=opts; $('#runBackend').innerHTML=opts;
+    $('#backendNote').textContent=b.note||'';}
+  const c=await api('/api/capabilities');
+  if(c.ok){
+    $('#capWired').innerHTML='<h3 class="muted small" style="margin:0 0 6px">Wired ('+c.wired.length+')</h3>'+
+      '<table><tbody>'+c.wired.map(w=>`<tr><td>✅ ${esc(w.feature)}</td><td class="mono muted">${esc(w.fn)}</td></tr>`).join('')+'</tbody></table>';
+    $('#capUnsup').innerHTML='<h3 class="muted small" style="margin:0 0 6px">Not supported ('+c.not_supported.length+') — disabled, with evidence</h3>'+
+      '<table><tbody>'+c.not_supported.map(n=>`<tr class="notsup"><td>🚫 ${esc(n.feature)}</td><td class="muted small">${esc(n.evidence)}</td></tr>`).join('')+'</tbody></table>';
+  }
+}
+$('#backendSel').onchange=()=>{$('#runBackend').value=$('#backendSel').value;};
+
+/* ---------- Config ---------- */
+async function loadConfig(){
+  const j=await api('/api/config');
+  if(!j.ok){msg($('#cfgMsg'),j.error,false);return;}
+  $('#cfgText').value=JSON.stringify(j.data,null,2);
+  const p=$('#cfgValid'); p.textContent=j.valid?'schema: valid':'schema: INVALID';
+  p.style.color=j.valid?'var(--ok)':'var(--err)';
+  if(!j.valid&&j.error)msg($('#cfgMsg'),'Validation: '+j.error,false);
+}
+async function saveConfig(){
+  let body; try{body=JSON.parse($('#cfgText').value);}catch(e){msg($('#cfgMsg'),'Not valid JSON: '+e.message,false);return;}
+  const j=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  msg($('#cfgMsg'),j.ok?'Saved. Reload to re-validate.':j.error,j.ok);
+}
+
+/* ---------- Target ---------- */
+async function loadTarget(){const j=await api('/api/target');
+  if(!j.ok){msg($('#tgtMsg'),j.error,false);return;} $('#tgtText').value=j.code;$('#tgtPath').textContent=j.path;}
+async function saveTarget(){const j=await api('/api/target',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('#tgtText').value})});
+  msg($('#tgtMsg'),j.ok?('Saved '+j.bytes+' bytes'):j.error,j.ok);}
+
+/* ---------- Project & graphs ---------- */
+async function loadProject(){
+  const j=await api('/api/project/model');const tb=$('#modTbl tbody');
+  if(!j.ok){tb.innerHTML=`<tr><td colspan=4 class="mono">${esc(j.error)}</td></tr>`;return;}
+  tb.innerHTML=j.module_infos.map(m=>`<tr style="cursor:pointer" onclick="loadSymbols('${esc(m.module)}')">
+    <td class="mono">${esc(m.module)}</td><td>${m.parsed?'✅':'❌'}</td><td>${m.symbols}</td><td class="muted small mono">${esc(m.path)}</td></tr>`).join('')
+    || '<tr><td colspan=4 class="muted">no modules (single-file config discovers one module)</td></tr>';
+}
+async function loadSymbols(mod){
+  const j=await api('/api/project/symbols?module='+encodeURIComponent(mod));
+  if(!j.ok){$('#symBox').innerHTML=`<span class="mono">${esc(j.error)}</span>`;return;}
+  $('#symBox').innerHTML=`<h3 class="muted small">symbols · ${esc(mod)}</h3><table><tbody>`+
+    (j.symbols.map(s=>`<tr><td class="mono">${esc(s.qualified_name)}</td><td><span class="tag">${esc(s.kind)}</span></td><td class="muted">L${s.lineno}–${s.end_lineno}</td></tr>`).join('')||'<tr><td class="muted">none</td></tr>')+'</tbody></table>';
+}
+async function loadGraph(kind){
+  const j=await api('/api/graph/'+kind);const box=$('#graphBox');
+  if(!j.ok){box.innerHTML=`<span class="mono">${esc(j.error)}</span>`;return;}
+  const g=j.graph||{}; const edges=g.edges||[];
+  let extra = kind==='import' ? `external targets: ${(j.external_targets||[]).length}` : `resolved ${j.resolved} · unresolved ${j.unresolved}`;
+  box.innerHTML=`<h3 class="muted small">${kind} graph · ${edges.length} edge(s) · ${extra}</h3>`+
+    '<div class="scroll"><table><thead><tr><th>From</th><th>→</th><th>To</th></tr></thead><tbody>'+
+    (edges.map(e=>`<tr><td class="mono">${esc(e.importer||e.caller||e.src||e.from||'')}</td><td>→</td><td class="mono">${esc(e.target||e.callee||e.dst||e.to||'')}</td></tr>`).join('')||'<tr><td colspan=3 class="muted">no edges (single module)</td></tr>')+'</tbody></table></div>';
+}
+
+/* ---------- Mutation preview ---------- */
+function statBars(obj,el,max){const ks=Object.entries(obj).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML=ks.map(([k,v])=>`<div class="opbar"><span class="n" title="${esc(k)}">${esc(k)}</span><span class="t"><i style="width:${Math.round(100*v/max)}%"></i></span><span class="v">${v}</span></div>`).join('');}
+async function previewMutants(){
+  const j=await api('/api/mutation/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  if(!j.ok){$('#mutTbl tbody').innerHTML=`<tr><td colspan=5 class="mono">${esc(j.error)}</td></tr>`;return;}
+  $('#mutTotal').textContent=j.total+' mutants · '+Object.keys(j.by_operator).length+' operators';
+  const mx=Math.max(1,...Object.values(j.by_operator)); statBars(j.by_operator,$('#opStats'),mx);
+  statBars(j.by_category,$('#catStats'),Math.max(1,...Object.values(j.by_category)));
+  $('#mutTbl tbody').innerHTML=j.mutants.map(m=>`<tr style="cursor:pointer" onclick="mutDiff('${esc(m.id)}')">
+    <td class="mono">${esc(m.id)}</td><td><span class="tag">${esc(m.operator)}</span></td><td>${esc(m.function)}</td><td>${m.line}</td>
+    <td class="mono"><span class="muted">${esc(m.original)}</span> → ${esc(m.mutated)}</td></tr>`).join('');
+}
+async function mutDiff(id){
+  const j=await api('/api/mutation/diff?id='+encodeURIComponent(id));
+  if(!j.ok){$('#diffBox').innerHTML=`<span class="mono">${esc(j.error)}</span>`;return;}
+  const o=j.original_full.split('\n'),m=j.mutant_full.split('\n');const n=Math.max(o.length,m.length);let out='';
+  for(let i=0;i<n;i++){const a=o[i]??'',b=m[i]??'';
+    if(a===b)out+=esc('  '+a)+'\n'; else{if(a!=='')out+='<span class="del">- '+esc(a)+'</span>\n';if(b!=='')out+='<span class="add">+ '+esc(b)+'</span>\n';}}
+  $('#diffBox').innerHTML=`<h3 class="muted small">diff · ${esc(id)} · ${esc(j.function)} (line ${j.line})</h3><pre class="diff">${out}</pre>`;
+}
+
+/* ---------- Run ---------- */
+let es=null;
+function setRunning(on){$('#btnRun').disabled=on;$('#btnStop').disabled=!on;}
+async function startRun(){
+  clearLog();
+  const body={no_llm:$('#noLlm').checked,verbose:$('#verbose').checked,backend:$('#runBackend').value};
+  const j=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!j.ok){addLog({type:'error',text:j.error});return;}
+  setRunning(true);openStream();
+}
+async function stopRun(){const j=await api('/api/run/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!j.ok)addLog({type:'warn',text:j.error});}
+function openStream(){
+  if(es)es.close(); es=new EventSource('/api/run/stream');
+  es.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return} addLog(m);
+    if(m.type==='phase'){const t=(m.text.match(/\[PHASE-\d+\]/)||[])[0]||'';$('#runPhase').textContent=t||'running';$('#phasePill').textContent=t||'running';$('#phasePill').className='pill run';}
+    if(m.type==='done'){setRunning(false);$('#phasePill').textContent='idle';$('#phasePill').className='pill';$('#runPhase').textContent='done';refreshStatus();}};
+  es.onerror=()=>{};
+}
+async function refreshStatus(){const j=await api('/api/run/status');if(j.ok){$('#runExit').textContent='exit='+(j.data.exit_code);setRunning(!!j.data.running);}}
+function addLog(m){const d=document.createElement('div');d.className='l '+(m.type||'log');d.dataset.t=m.type||'log';d.textContent=m.text||'';
+  const f=$('#logFilter').value; if(f&&m.type!==f&&m.type!=='start'&&m.type!=='done')d.style.display='none';
+  $('#log').appendChild(d); if($('#autoscroll').checked)$('#log').scrollTop=$('#log').scrollHeight;}
+function clearLog(){$('#log').innerHTML='';}
+$('#logFilter').onchange=()=>{const f=$('#logFilter').value;$$('#log .l').forEach(d=>{d.style.display=(!f||d.dataset.t===f||d.dataset.t==='start'||d.dataset.t==='done')?'':'none';});};
+
+/* ---------- Results & debug ---------- */
+async function loadReport(){
+  const j=await api('/api/results/report');const box=$('#reportBox');
+  if(!j.ok){box.innerHTML=`<span class="mono">${esc(j.error)}</span>`;return;}
+  const d=j.data,s=d.summary||d;
+  const adj=s.adjusted_score??s.adjusted??0, raw=s.raw_score??s.raw??0;
+  box.innerHTML=`<div class="kv">
+    <b>adjusted score</b><span>${adj}%</span><b>raw score</b><span>${raw}%</span>
+    <b>killed</b><span>${s.killed??'?'} / ${s.total_mutants??s.total??'?'}</span>
+    <b>suspected</b><span>${s.suspected??'?'}</span><b>alive</b><span>${s.alive??'?'}</span></div>
+    <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,adj)}%"></i></div>`;
+}
+let _mutCache=[];
+async function loadMutants(){
+  const j=await api('/api/results/mutants');const tb=$('#resMutTbl tbody');
+  if(!j.ok){tb.innerHTML=`<tr><td colspan=5 class="mono">${esc(j.error)}</td></tr>`;$('#heatBox').innerHTML='';return;}
+  _mutCache=Array.isArray(j.data)?j.data:[];
+  $('#heatBox').innerHTML='<div class="heat">'+_mutCache.map(m=>`<span class="c ${m.status==='KILLED'?'k':(m.status==='ALIVE'?'a':'')}" title="${esc(m.id)}:${esc(m.status)}"></span>`).join('')+'</div>';
+  tb.innerHTML=_mutCache.map(m=>`<tr><td class="mono">${esc(m.id)}</td><td><span class="tag ${esc(m.status)}">${esc(m.status)}</span></td><td>${esc(m.operator_name)}</td><td>${esc(m.function_name)}</td><td>${m.line}</td></tr>`).join('');
+}
+async function detectEquiv(){const j=await api('/api/results/equivalence');const p=$('#equivPill');
+  p.textContent=j.ok?('provable equivalents: '+j.count):('err: '+j.error); p.style.color=j.ok?'var(--accent)':'var(--err)';}
+async function loadSuite(){const j=await api('/api/results/suite');const box=$('#suiteBox');
+  if(!j.ok){box.innerHTML=`<span class="mono">${esc(j.error)}</span>`;return;}
+  const d=j.data,tests=d.tests||[];
+  box.innerHTML=`<div class="kv"><b>test count</b><span>${d.test_count??tests.length}</span></div>
+    <div class="scroll" style="margin-top:8px"><table><thead><tr><th>#</th><th>function</th><th>inputs</th></tr></thead><tbody>`+
+    tests.map((t,i)=>`<tr><td>${i+1}</td><td class="mono">${esc(t.function)}</td><td class="mono muted">${esc(JSON.stringify(t.inputs))}</td></tr>`).join('')+'</tbody></table></div>';}
+async function exportPytest(){const j=await api('/api/export/pytest',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=$('#pytestBox');
+  b.style.display='block'; b.textContent=j.ok?j.content:('error: '+j.error);}
+
+/* ---------- History ---------- */
+async function loadHistory(){
+  const t=await api('/api/history/trend'),r=await api('/api/history/runs');
+  $('#histPill').textContent=t.ok?(t.runs+' run(s) recorded'):('err: '+t.error);
+  if(t.ok){const tr=t.trend||{};$('#trendBox').innerHTML='<div class="kv">'+Object.entries(tr).map(([k,v])=>`<b>${esc(k)}</b><span class="mono">${esc(typeof v==='object'?JSON.stringify(v):v)}</span>`).join('')+'</div>';}
+  const tb=$('#histTbl tbody');
+  if(r.ok){const h=r.history||[];tb.innerHTML=h.map(e=>`<tr><td class="mono">${esc(e.timestamp||e.when||'')}</td><td>${e.adjusted_score??'?'}%</td><td>${e.n_killed??'?'}/${e.n_total??'?'}</td><td>${e.n_min_tests??'?'}</td><td>${e.runtime_seconds??'?'}</td></tr>`).join('')||'<tr><td colspan=5 class="muted">no runs yet — launch the pipeline</td></tr>';}
+  else tb.innerHTML=`<tr><td colspan=5 class="mono">${esc(r.error)}</td></tr>`;
+}
+
+loadOverview();
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+{
+  "generated_at": "2026-06-29T18:48:58",
+  "source_hash": "601802a10f88945a3c2a7facd7db4bcc",
+  "test_count": 4,
+  "mutation_score": 100.0,
+  "tests": [
+    {
+      "test_id": "T0008",
+      "function": "binary_search",
+      "inputs": {
+        "arr": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "target": 0
+      },
+      "kills": [
+        "M020",
+        "M022",
+        "M028",
+        "M029",
+        "M033"
+      ],
+      "expected_output": "-1"
+    },
+    {
+      "test_id": "T0030",
+      "function": "bubble_sort",
+      "inputs": {
+        "arr": [
+          10,
+          -10,
+          5,
+          -5,
+          0
+        ]
+      },
+      "kills": [
+        "M001",
+        "M002",
+        "M003",
+        "M004",
+        "M005",
+        "M006",
+        "M008",
+        "M009",
+        "M010",
+        "M011",
+        "M012",
+        "M013",
+        "M031",
+        "M034",
+        "M037",
+        "M040",
+        "M041",
+        "M043",
+        "M044",
+        "M045",
+        "M046",
+        "M047"
+      ],
+      "expected_output": "[-10, -5, 0, 5, 10]"
+    },
+    {
+      "test_id": "T0033",
+      "function": "binary_search",
+      "inputs": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9
+        ],
+        "target": 9
+      },
+      "kills": [
+        "M014",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M021",
+        "M022",
+        "M024",
+        "M025",
+        "M026",
+        "M027",
+        "M032",
+        "M033",
+        "M035",
+        "M036",
+        "M038",
+        "M039",
+        "M042",
+        "M048"
+      ],
+      "expected_output": "4"
+    },
+    {
+      "test_id": "T0040",
+      "function": "binary_search",
+      "inputs": {
+        "arr": [],
+        "target": 1
+      },
+      "kills": [
+        "M014",
+        "M015",
+        "M017",
+        "M032",
+        "M036"
+      ],
+      "expected_output": "-1"
+    }
+  ]
+}

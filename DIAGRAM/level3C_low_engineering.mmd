@@ -1,0 +1,48 @@
+%% Level 3 — Low Level | Variant C — Engineering Deep View
+%% Detailed internal decomposition; algorithms, data structures, safety properties
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph CFG_SYS["Configuration and Project Model"]
+        JSON_CFG["config.json structure:\nfunctions: [{name params type}]\npartitions: {type_name: [values]}\nmutation: {arith rel logical integration_ops}\nsandbox: {timeout workers backend}\noptimizer: {target_score feedback_rounds}"]
+        VALIDATE_CFG["config_loader.py:\n_is_ci_environment(): stdin.isatty()\nREQUIRED_TOP_KEYS enforcement\n_validate_project_root(): N1.1 knobs"]
+        PM2["project_model.py:\ndiscover_modules() os.walk pruning\n_parse_tolerant() AST + error capture\n_extract_symbols() qualified names\nbuild_import_graph() via graphs.py\nbuild_call_graph() best-effort"]
+    end
+
+    subgraph MUT_SYS["Mutation System — core/mutant_generator.py"]
+        ENGINE2["_MutationEngine(ast.NodeTransformer)\nmode=collect: DFS count mutable sites\nmode=mutate: DFS apply at target_index\nSame traversal order eliminates mismatch\ndeep-copy(tree) before every mutate pass"]
+        INT_SYS["Integration Operators (5 types):\nIPVR: ast.BinOp(last_arg, Sub, 1)\nIUOI: ast.UnaryOp(Not, mn.test)\nIORC: swap mn.left and mn.comparators[0]\nISMA: ast.BinOp(mn.slice, Add, 1)\nIMCD: _LenReplacer(NodeTransformer)\n_match_node(mn,ln,col): position guard"]
+        ATTR["_apply_qualified_attribution():\nproject_model.qualified_name_at(mod, line)\nfields: module + qualified_name\nbest-effort: never breaks generation"]
+    end
+
+    subgraph EXEC_SYS["Execution System — sandbox_executor.py + executor.py"]
+        EXEC_FACT["make_executor(config):\nexecution_backend config key\npool (default): _WorkerPool M3\nlegacy: run_safe() per job\ncontainer: ContainerExecutor I5.4"]
+        WORKER2["_pool_worker_main() / _execute_job():\nexec(compile(code, sandbox, exec))\nRLIMIT_AS 512MB (POSIX only)\nRLIMIT_FSIZE 64MB (I5.2)\nRLIMIT_NOFILE 256 (I5.2)\nRLIMIT_CPU backup (non-cumulative)"]
+        DISPATCH["_WorkerPool.run():\n1. idle queue dispatch\n2. drain out_q (results first)\n3. deadline check per inflight widx\n4. recycle on timeout or crash\nPOLL_INTERVAL=0.01s SLACK=0.75s"]
+        IMPORT_B["_worker_import() N2.4 opt-in:\nshutil.copytree to tmpdir\noverwrite module file with mutated src\nimportlib.import_module() for sibling imports\nrmtree cleanup in finally"]
+    end
+
+    subgraph OPT_SYS["Optimization System"]
+        ILP_SYS["ilp_solver.solve():\n1. Partition: coverable vs suspected\n2. LpProblem(MinTestSuite, LpMinimize)\n3. LpVariable(f't{i}', Binary) per test\n4. Cover: Σ x_i ≥ 1 ∀ coverable j\n5. PULP_CBC_CMD(msg=0, timeLimit=60)\n6. On not-optimal: greedy fallback"]
+        SCORE_SYS["Scoring:\nraw = n_killed / n_total × 100\nadj = n_killed / (n_total-n_suspected) × 100\nILPResult: selected_tests suspected_indices\nraw_score adjusted_score feasible"]
+        FB_SYS["feedback_loop.run():\nFor each ALIVE mutant (≤max_mutants):\n  failed_sample = mutant.tried[-3:]\n  prompt = orig_line vs mut_line + failed\n  LLM → safe_parse_json → inputs\n  mutant.tried.append(inputs)\n  extend_kill_matrix() new tests only\n  re-solve ILP each round\n  stop if n_killed <= prev_killed"]
+    end
+
+    subgraph CACHE_SYS["Caching and History"]
+        KMC["KillMatrixCache:\nkey=MD5(src+sorted(m.code)+tests)\nload(): schema_version guard\nsave(): tmp+os.replace atomic\nJSON only: no pickle (security)"]
+        CELL["CellCache M4.4 (dormant):\nkey=cc1.id1.SHA256(mut+test)\nenabled=False always in M4\nlookup() always returns None\nstore() always no-op\nactivation deferred to V3 N10"]
+        HIST3["history_tracker.py:\nrecord_run() → history.json\nget_trend(): last 2 runs delta\nimproving >1.0 · declining <-1.0\nMAX_HISTORY_ENTRIES=500"]
+    end
+
+    subgraph LLM_SYS["LLM System — llm/client.py"]
+        CB2["Circuit Breaker:\nCLOSED: normal (failure_count=0)\nOPEN: fast fail 120s (count≥5)\nHALF-OPEN: probe after recovery\n_check_circuit_breaker() after 5xx"]
+        BACKOFF["Retry Logic:\n429: wait=delay×2^attempt (exp backoff)\n5xx: wait=delay×attempt (linear)\n4xx: no retry (client error)\nURLError: network + CB count"]
+        PARSER["safe_parse_json():\n1. _extract_by_bracket([) nesting-aware\n2. _extract_by_bracket({) single object\n3. _try_parse_whole() strip code fence\n4. _try_literal_eval() Python single-quote"]
+    end
+
+    CFG_SYS --> MUT_SYS
+    MUT_SYS --> EXEC_SYS
+    EXEC_SYS --> OPT_SYS
+    OPT_SYS --> CACHE_SYS
+    LLM_SYS --> OPT_SYS
+    

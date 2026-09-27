@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mutation-framework"
+version = "2.0.0.dev0"
+description = "LLM-assisted mutation testing framework with ILP minimum-suite selection"
+requires-python = ">=3.10"
+dependencies = [
+    "pulp>=2.7",
+]
+
+[project.optional-dependencies]
+coverage = ["coverage>=7.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+# CLI entry point — `mutation-framework` invokes cli/main.py:main
+mutation-framework = "cli.main:main"
+
+[tool.setuptools]
+py-modules = ["main", "target_code", "verify", "gui"]
+
+[tool.setuptools.packages.find]
+# Corrected to the packages that actually exist in the tree. The original list
+# omitted `utils*` (so installed wheels dropped utils/) and listed `execution*`
+# and `reporting*`, which were never created (those modules live in core/ and
+# utils/ per their file headers).
+include = ["core*", "utils*", "strategies*", "llm*", "infra*", "cli*"]
+exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,53 @@
+%% Level 3 — Low Level | Variant B — Presentation Style
+%% Module-level view with readable descriptions; for implementation walkthroughs
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph CORE_DATA["Core Data Contracts — contracts.py"]
+        MRR["MutantRecord dataclass\nid · category · operator_name · code\nstatus · line · qualified_name · module"]
+        STATC["Status lifecycle:\nALIVE → KILLED or SUSPECTED or EQUIVALENT"]
+    end
+
+    subgraph AST_ENG["AST Mutation Engine — mutant_generator.py"]
+        PARSE["ast.parse() → AST tree\ndeep-copy before each mutation"]
+        COLL["Collect pass:\nfind all mutable operator sites"]
+        MUTP["Mutate pass:\napply exactly one replacement"]
+        UNPARSE["ast.unparse() → code string\ncanonical diff rejects no-ops"]
+        PARSE --> COLL --> MUTP --> UNPARSE
+    end
+
+    subgraph STRATEGIES["Test Generation Strategies — strategies/"]
+        ACOC3["ACOC strategy\nCartesian product of partitions\nseed=42 for reproducibility\nrandom.sample for large spaces"]
+        LLMST["LLM strategy\nGroup mutants by fn × operator\nOne API call per group\nPrompt: diff of changed line"]
+        DOMST["Domain strategy\n14 sort edge cases\n21 binary search cases\nfallback param name detection"]
+    end
+
+    subgraph EXEC_LAYER["Execution Layer — sandbox_executor.py + executor.py"]
+        WPOOL2["Warm Worker Pool\nPersistent spawned processes\nPer-job wall-clock deadline\nRecycle on timeout or crash\nRLIMIT_AS 512MB per worker"]
+        CONT3["Container Backend\ndocker or podman runtime probe\n--network none --read-only\n--memory cap --pids-limit 128\nFail loud if no runtime"]
+        RUNSAFE2["run_safe()\nspawn + reader thread\nQueue drain + join timeout\ncpu_limit backup signal"]
+    end
+
+    subgraph OPT_LAYER["Optimization Layer — ilp_solver.py + feedback_loop.py"]
+        ILP3["ILP: PuLP CBC\nmin Σ x_i  (minimize tests)\ns.t. Σ x_i ≥ 1 ∀ coverable mutant j\nFeasibility timeout: 60s default"]
+        GREEDY3["Greedy fallback\nActivates on CBC timeout or no PuLP\nln(n) approximation guarantee\nPicks test killing most uncovered"]
+        FBL["Feedback loop\nFor each ALIVE mutant:\n  prompt LLM with diff context\n  extend_kill_matrix()\n  re-solve ILP\nStop: no progress or target met"]
+    end
+
+    subgraph ANA2["Advisory Analysis Layer"]
+        EQD["Equivalence Detector\nAST identity folding\nx*1 x+0 x/1 x-0 etc.\nAdvisory only: never alters scores"]
+        FAL["Feedback Analyzer\nCategory-driven reasoning:\nREL ARITH LOGICAL INTEGRATION\nLine-targeted suggestions"]
+    end
+
+    subgraph OUTPUT3["Output Artifacts"]
+        MREP["mutation_report.json\nsummary · killed · suspected · alive\nanalysis: equivalence + feedback"]
+        MSUIT["minimum_test_suite.json\nselected tests · kills · expected_output"]
+        MANIFEST["run_manifest.json\nphase durations · events\nreproducibility envelope"]
+    end
+
+    CORE_DATA --> AST_ENG
+    AST_ENG --> STRATEGIES
+    STRATEGIES --> EXEC_LAYER
+    EXEC_LAYER --> OPT_LAYER
+    OPT_LAYER --> ANA2
+    ANA2 --> OUTPUT3

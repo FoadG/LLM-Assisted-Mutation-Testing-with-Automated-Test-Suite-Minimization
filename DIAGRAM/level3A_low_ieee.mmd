@@ -1,0 +1,67 @@
+%% Level 3 — Low Level | Variant A — IEEE Academic Style
+%% Module-level implementation view; file names and class/function references
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph CDOM["core/contracts.py — Domain Core"]
+        CMR["MutantRecord: frozen dataclass\nid · category · operator_name\nfunction_name · line · code · status\nqualified_name · module"]
+        CSTAT["STATUS_ALIVE · KILLED · SUSPECTED · EQUIVALENT\nVALID_STATUSES: frozenset"]
+        CTYPES["KillMatrix: list[list[bool]]\nTestRecord: dict[str, Any]\nOrigResult: tuple[str, Optional[str]]"]
+    end
+
+    subgraph CGEN["core/mutant_generator.py"]
+        CENG["_MutationEngine(ast.NodeTransformer)\nvisit_BinOp · visit_Compare · visit_BoolOp\n_process(): collect or mutate mode"]
+        CINT["_generate_integration_mutants()\nIPVR: range(n)→range(n-1)\nIUOI: cond→not cond\nIORC: swap comparator operands\nISMA: arr[i]→arr[i+1]\nIMCD: len(x)→0"]
+        CQUAL["_apply_qualified_attribution()\nproject_model.qualified_name_at()\nbest-effort observational N1.6"]
+    end
+
+    subgraph CIDENT["core/identity.py — M4.3"]
+        CSHA["_sha(parts): SHA-256\nIDENTITY_SCHEME_VERSION=1 prefix\nSEP=0x1F unit separator"]
+        CMID["mutant_identity(): semantic fields\nfn · category · operators · code\nqn + mod: project-stable N1.5"]
+        CCELL["mutant_test_identity(): cell key\nfor I3 per-cell cache (M4.4 dormant)"]
+    end
+
+    subgraph CEXEC["core/executor.py — Abstraction Layer"]
+        CPROTO["Executor Protocol (runtime_checkable)\nstart() · submit_many() · shutdown()"]
+        CWPE["WorkerPoolExecutor\nlazy _WorkerPool import\npool_factory injection"]
+        CLE["LegacyExecutor\nrun_safe() per job\nno process reuse"]
+        CCE["ContainerExecutor\ndetect_runtime(): shutil.which\n_build_run_argv(): hardened flags"]
+        CFACT["make_executor(config)\nbackend key: pool · legacy · container"]
+    end
+
+    subgraph CSAND["core/sandbox_executor.py"]
+        CWORK["_worker(): exec compile fresh namespace\nRLIMIT_AS 512MB\nRLIMIT_FSIZE 64MB · RLIMIT_NOFILE 256"]
+        CRSAFE["run_safe(): spawn context\ncpu_limit = int(timeout)+1\nreader thread: q.get(timeout+1)\np.join(timeout) · reader.join(timeout+2)"]
+        CWPOOL["_WorkerPool:\nidle queue · inflight dict\ndrain results before timeout check\nrecycle on crash or deadline miss"]
+        CBKM["build_kill_matrix():\noriginal results sequential\n_adaptive_timeout() P90\n_build_columns_via_pool() parallel"]
+    end
+
+    subgraph CILP["core/ilp_solver.py"]
+        CSOLVE["solve():\npartition coverable vs suspected\nLpProblem MinTestSuite\nLpVariable Binary per test"]
+        CIDR["ILPResult:\nselected_tests · suspected_indices\nraw_score · adjusted_score\nn_killed · n_total · feasible"]
+        CGREEDY["_greedy_fallback():\nuncovered set iteration\nbest_test = max kills\nln(n) approximation ratio"]
+    end
+
+    subgraph CFB["core/feedback_loop.py"]
+        CFRUN["run(): rounds loop\nmax_rounds · max_mutants_per_round\nprev_killed tracking · early stop"]
+        CFPROMPT["_build_feedback_prompt()\norig_line vs mut_line diff\nfailed_sample context"]
+        CFEXT["extend_kill_matrix()\nnew tests only re-executed\nThreadPoolExecutor per mutant"]
+    end
+
+    subgraph CLLM["llm/client.py"]
+        CCB["Circuit Breaker:\n_cb_failure_count threshold=5\nrecovery_timeout=120s\nCLOSED → OPEN → HALF-OPEN"]
+        CPOST["_post(): urllib.request.Request\nx-api-key header\nanthropicversion=2023-06-01\ntimeout=30s"]
+        CJSON["safe_parse_json():\nbracket-matching (not regex)\nast.literal_eval fallback\nsingle-quote Python dict support"]
+    end
+
+    CDOM --> CGEN
+    CGEN -.->|"mutant_identity()"| CIDENT
+    CGEN --> STRATL2[strategies/ registry]
+    STRATL2 --> CSAND
+    CSAND --> CEXEC
+    CEXEC -.->|"backend selection"| CSAND
+    CSAND --> CILP
+    CILP --> CFB
+    CFB --> CILP
+    CLLM --> STRATL2
+    CLLM --> CFB

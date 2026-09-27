@@ -1,0 +1,48 @@
+%% Level 2 — Mid Level | Variant C — Engineering Deep View
+%% Internal structure of each subsystem including key algorithms and data
+%% System: LLM-Assisted Mutation Testing Framework
+
+flowchart TD
+    subgraph MUT4["Mutation Engine: core/mutant_generator.py"]
+        ENGINE3["_MutationEngine(ast.NodeTransformer)\nTwo-pass DFS: collect then mutate\nSame traversal → no index mismatch"]
+        AMAP["ARITH_MAP: Add Sub Mult\nDiv FloorDiv Mod (6 types)"]
+        RMAP["REL_MAP: Lt Gt LtE GtE\nEq NotEq Is IsNot (8 types)"]
+        IMAP["Integration Operators:\nIPVR IUOI IORC ISMA IMCD"]
+        CANN["_canonical(): ast.parse→unparse\nCached in _CANONICAL_CACHE dict"]
+        QUALAT["_apply_qualified_attribution()\nProjectModel.qualified_name_at()\nN1.6: module + qualified_name"]
+    end
+
+    subgraph STRATL["Strategy Layer: strategies/"]
+        SREG2["registry.py: get_enabled()\nDefault order: acoc llm domain\nconfig.test_pool.strategies override"]
+        SACO["acoc_strategy.py:\nrandom.Random(seed=42)\ntotal<=max: enumerate all\nelse: random.sample or direct"]
+        SLLM["llm_strategy.py:\nGroup by fn × operator name\nOne API call per group\nsafe_parse_json fallback"]
+        SDOM["domain_strategy.py:\n14 sort arrays (empty 1-elem reversed)\n21 search cases (boundary mid absent)\n_find_param() name matching"]
+        SDED2["json_utils.deduplicate()\ntest_hash: MD5(fn+sorted inputs)"]
+        SREG2 --> SACO & SLLM & SDOM --> SDED2
+    end
+
+    subgraph EXECL["Execution Layer"]
+        EFACT["make_executor(config):\nexecution_backend key\npool default · legacy · container"]
+        EWPOOL["_WorkerPool:\nn spawn processes · out_q shared\nper-job deadline tracking\nrecycle on timeout or crash\ndeterministic: keyed by job_id"]
+        ECONT["ContainerExecutor:\ndetect_runtime() shutil.which\n--network none --read-only\n--memory cap --pids-limit\nfail loud if no runtime"]
+        EADAP["_adaptive_timeout():\nsorted valid orig_times\nk = round(0.9*(n-1))\nclamp: floor to hard_cap"]
+        EFACT --> EWPOOL & ECONT
+        EADAP --> EWPOOL
+    end
+
+    subgraph OPTL["Optimization Layer"]
+        OILP["ilp_solver.solve():\n1. Partition: coverable vs suspected\n2. LpProblem LpMinimize\n3. LpVariable Binary per test\n4. Cover constraint per mutant\n5. CBC timeout 60s default"]
+        OFBL["feedback_loop.run():\nmax_rounds=3 default\nmax_mutants_per_round=10\nextend_kill_matrix() per round\nstop: no progress or target met"]
+        OEQL["equivalence.detect_equivalent():\n_IdentityFolder: x*1 x+0 x/1\nast.dump no attributes\nAdvisory only: never alters scores"]
+    end
+
+    subgraph INFRAL["Infrastructure"]
+        ICACHE["KillMatrixCache:\nMD5(src+sorted mutant codes+tests)\natomic: write .tmp then os.replace\nschema_version validation"]
+        IMAN["Manifest(envelope):\ncontextmanager phase() timing\nevent() monotonic timestamps\nvalidate() JSON schema check"]
+        ILOG["logging_setup.configure():\n_HumanFormatter: bare message\n_JsonFormatter: structured JSON\nidempotent: second call updates level"]
+    end
+
+    MUT4 -->|"list[MutantRecord]"| STRATL
+    STRATL -->|"list[TestRecord]"| EXECL
+    EXECL -->|"KillMatrix + OrigResults"| OPTL
+    INFRAL -.->|"cross-cutting"| EXECL & OPTL
